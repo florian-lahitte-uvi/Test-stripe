@@ -6,6 +6,12 @@ import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebaseClient';
 import { useRouter } from 'next/navigation';
 
+// Exception emails that can bypass email verification
+const EMAIL_VERIFICATION_EXCEPTIONS = [
+  'flolahite@gmail.com',
+  'bob@gmail.com'
+];
+
 export function useProtectedRoute() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -18,6 +24,12 @@ export function useProtectedRoute() {
 
       if (!user) {
         router.push('/');
+        return;
+      }
+
+      // Check if email is verified or in exception list
+      if (!user.emailVerified && !EMAIL_VERIFICATION_EXCEPTIONS.includes(user.email?.toLowerCase() || '')) {
+        router.push('/verify-email');
         return;
       }
 

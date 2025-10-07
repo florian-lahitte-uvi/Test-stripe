@@ -1,30 +1,35 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe'; // your Stripe instance (see below)
 import { auth, db } from '@/lib/firebaseAdmin'; // Firebase Admin SDK
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
-
-  const { uid, priceId } = req.body;
-
-  if (!uid || !priceId) {
-    return res.status(400).json({ error: 'Missing uid or priceId' });
-  }
-
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { uid, priceId } = body;
+
+    if (!uid || !priceId) {
+      return NextResponse.json(
+        { error: 'Missing uid or priceId' },
+        { status: 400 }
+      );
+    }
+
     // 1. Get Firebase user
     const user = await auth.getUser(uid);
     const email = user.email;
 
     if (!email) {
-      return res.status(400).json({ error: 'User has no email' });
+      return NextResponse.json(
+        { error: 'User has no email' },
+        { status: 400 }
+      );
     }
 
     // 2. Check if Stripe customer already exists in Firestore
     const profileRef = db.collection('profiles').doc(uid);
     const profileSnap = await profileRef.get();
 
-    let customerId = profileSnap.exists ? profileSnap.data()?.stripeCustomerId : null;
+    let customerId = profileSnap.exists ? profileSnap.data()?.subscription?.customerId : null;
 
     if (!customerId) {
       // 3. Create new Stripe customer
@@ -38,7 +43,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 4. Save customer ID to Firestore profile
       await profileRef.set(
         {
-          stripeCustomerId: customerId,
+          subscription: {
+            customerId: customerId,
+          }
         },
         { merge: true }
       );
@@ -59,9 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscribe`,
     });
 
-    return res.status(200).json({ url: session.url });
+    return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error('[Create Checkout Session Error]', error.message);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

@@ -6,7 +6,7 @@ import { app } from './firebaseClient';
 
 const db = getFirestore(app);
 
-export async function createUserProfileIfNotExists() {
+export async function createUserProfileIfNotExists(firstName?: string, lastName?: string, role?: 'Parent' | 'Family' | 'Medical') {
   const auth = getAuth(app);
   const user = auth.currentUser;
 
@@ -16,7 +16,7 @@ export async function createUserProfileIfNotExists() {
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
-    await setDoc(userRef, {
+    const profileData: any = {
       uid: user.uid,
       email: user.email,
       createdAt: new Date().toISOString(),
@@ -24,7 +24,14 @@ export async function createUserProfileIfNotExists() {
         active: false,
         plan: null,
       },
-    });
+    };
+
+    // Add additional fields if provided (for new signups)
+    if (firstName) profileData.firstName = firstName;
+    if (lastName) profileData.lastName = lastName;
+    if (role) profileData.role = role;
+
+    await setDoc(userRef, profileData);
 
     console.log('✅ Created new profile for user:', user.email);
   } else {
