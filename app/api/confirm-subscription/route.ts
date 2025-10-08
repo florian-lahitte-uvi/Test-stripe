@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     }
 
     const subscription = session.subscription as any; // Stripe.Subscription type
-    const planName = subscription.items.data[0].price.nickname || subscription.items.data[0].price.id;
+    const priceId = subscription.items.data[0].price.id;
+    const productId = subscription.items.data[0].price.product;
+    
+    // Fetch the product separately to get the plan name
+    const product = await stripe.products.retrieve(productId as string);
+    const planName = product.name || 'Unknown Plan';
 
     const result = { 
       plan: planName,

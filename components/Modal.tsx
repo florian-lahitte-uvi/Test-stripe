@@ -227,23 +227,11 @@ export function PlanChangeModal({
           </div>
         </div>
         
-        <p className="text-gray-700">{getMessage()}</p>
-        
-        {isUpgrade && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Immediate Change:</strong> You'll get {newPlan} features right away and be charged the prorated difference for your remaining billing period.
-            </p>
-          </div>
-        )}
-
-        {!isUpgrade && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800">
-              <strong>End-of-Period Change:</strong> No immediate charges. Your {newPlan} subscription starts on your next billing date.
-            </p>
-          </div>
-        )}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            <strong>Immediate Change:</strong> You'll get {newPlan} features right away and be charged the prorated difference for your remaining billing period.
+          </p>
+        </div>
         
         <div className="flex space-x-3 pt-4">
           <button

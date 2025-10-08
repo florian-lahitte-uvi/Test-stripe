@@ -71,9 +71,6 @@ export async function GET(request: NextRequest) {
       stripeSubscription.current_period_start = stripeSubscription.created || Math.floor(Date.now() / 1000);
     }
 
-    // Get scheduled plan change from Firestore profile
-    const scheduledPlanChange = profileData?.subscription?.scheduled_plan_change || null;
-
     return NextResponse.json({
       subscription: {
         id: stripeSubscription.id,
@@ -83,7 +80,6 @@ export async function GET(request: NextRequest) {
         cancel_at_period_end: stripeSubscription.cancel_at_period_end || false,
         canceled_at: stripeSubscription.canceled_at,
         created: stripeSubscription.created || Math.floor(Date.now() / 1000),
-        scheduled_plan_change: scheduledPlanChange,
       },
       plan: {
         name: product?.name || 'Unknown Plan',

@@ -12,7 +12,6 @@ import {
   RefreshCw,
   ExternalLink,
   ArrowUp,
-  ArrowDown,
   Info,
   Users,
   Heart,
@@ -28,11 +27,6 @@ interface SubscriptionData {
     cancel_at_period_end: boolean;
     canceled_at: string | null;
     created: number;
-    scheduled_plan_change?: {
-      new_plan: string;
-      new_price_id: string;
-      effective_date: string;
-    };
   };
   plan: {
     name: string;
@@ -112,7 +106,7 @@ export default function SubscriptionManager() {
   const [planChangeData, setPlanChangeData] = useState<{
     newPriceId: string;
     newPlanName: string;
-    changeType: 'upgrade' | 'downgrade';
+    changeType: 'upgrade';
   } | null>(null);
 
   // Plan info modal state
@@ -227,12 +221,16 @@ export default function SubscriptionManager() {
 
     if (!currentPlan || !newPlan) return;
 
-    const changeType = newPlan.level > currentPlan.level ? 'upgrade' : 'downgrade';
+    // Only allow upgrades
+    if (newPlan.level <= currentPlan.level) {
+      setError('Downgrades are not available. To switch to a lower plan, please cancel your current subscription and resubscribe after it expires.');
+      return;
+    }
 
     setPlanChangeData({
       newPriceId,
       newPlanName,
-      changeType,
+      changeType: 'upgrade',
     });
     setShowPlanChangeModal(true);
   };
@@ -242,39 +240,7 @@ export default function SubscriptionManager() {
     setShowPlanInfoModal(true);
   };
 
-  const handleCancelScheduledChange = async () => {
-    if (!user) return;
 
-    try {
-      setActionLoading(true);
-      
-      const response = await fetch('/api/clear-scheduled-change', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uid: user.uid,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel scheduled change');
-      }
-
-      // Refresh subscription data
-      await fetchSubscription();
-      setSuccessMessage('Scheduled plan change has been cancelled. You will remain on your current plan.');
-      setShowSuccessModal(true);
-
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const confirmPlanChange = async () => {
     if (!user || !planChangeData) return;
@@ -357,13 +323,22 @@ export default function SubscriptionManager() {
     );
   }
 
-  if (!subscriptionData) {
+  // Check if subscription is expired (canceled status)
+  const isExpired = subscriptionData && subscriptionData.subscription.status === 'canceled';
+
+  if (!subscriptionData || isExpired) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="text-center">
           <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-6" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">No Active Subscription</h2>
-          <p className="text-gray-600 mb-6">You don't have an active subscription yet. Choose a plan to get started with My Umbrella Care.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-3">
+            {isExpired ? 'Subscription Expired' : 'No Active Subscription'}
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {isExpired 
+              ? 'Your subscription has ended. Choose a plan to continue enjoying My Umbrella Care services.' 
+              : 'You don\'t have an active subscription yet. Choose a plan to get started with My Umbrella Care.'}
+          </p>
           
           <a
             href="/subscribe"
@@ -385,10 +360,6 @@ export default function SubscriptionManager() {
 
   const { subscription, plan } = subscriptionData;
   
-  // Debug logging
-  console.log('Subscription data:', subscription);
-  console.log('Current period end timestamp:', subscription.current_period_end);
-  
   // Handle date conversion with error checking
   const currentPeriodEnd = subscription.current_period_end && subscription.current_period_end > 0
     ? new Date(subscription.current_period_end * 1000)
@@ -396,8 +367,6 @@ export default function SubscriptionManager() {
     
   // Validate the date
   const isValidDate = !isNaN(currentPeriodEnd.getTime());
-  console.log('Period end timestamp:', subscription.current_period_end);
-  console.log('Converted date:', currentPeriodEnd, 'Is valid:', isValidDate);
   
   const isActive = subscription.status === 'active';
   const isCanceling = subscription.cancel_at_period_end;
@@ -475,29 +444,7 @@ export default function SubscriptionManager() {
           </div>
         )}
 
-        {/* Scheduled Plan Change Notice */}
-        {subscription.scheduled_plan_change && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-blue-800">Scheduled Plan Change</h4>
-                <p className="text-blue-700 text-sm mb-3">
-                  Your plan will change from <strong>{plan.name}</strong> to <strong>{subscription.scheduled_plan_change.new_plan}</strong> on{' '}
-                  {new Date(subscription.scheduled_plan_change.effective_date).toLocaleDateString()}.
-                  You'll keep your current features until then.
-                </p>
-                <button
-                  onClick={handleCancelScheduledChange}
-                  disabled={actionLoading}
-                  className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-1 rounded transition-colors"
-                >
-                  Cancel Scheduled Change
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Status Information */}
         <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -536,7 +483,6 @@ export default function SubscriptionManager() {
               const isCurrentPlan = availablePlan.name === plan.name;
               const currentPlan = AVAILABLE_PLANS.find(p => p.name === plan.name);
               const isUpgrade = currentPlan && availablePlan.level > currentPlan.level;
-              const isDowngrade = currentPlan && availablePlan.level < currentPlan.level;
               const IconComponent = availablePlan.icon;
 
               return (
@@ -580,28 +526,15 @@ export default function SubscriptionManager() {
                     ${availablePlan.price}/month
                   </p>
                   
-                  {!isCurrentPlan && (
+                  {!isCurrentPlan && isUpgrade && (
                     <button
                       onClick={() => handlePlanChange(availablePlan.priceId, availablePlan.name)}
                       disabled={actionLoading}
-                      className={`w-full flex items-center justify-center space-x-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
-                        isUpgrade
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                          : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                      }`}
+                      className="w-full flex items-center justify-center space-x-1 px-3 py-2 rounded text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                       style={{ fontSize: '14px' }}
                     >
-                      {isUpgrade ? (
-                        <>
-                          <ArrowUp className="w-3 h-3" />
-                          <span>Upgrade</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDown className="w-3 h-3" />
-                          <span>Downgrade</span>
-                        </>
-                      )}
+                      <ArrowUp className="w-3 h-3" />
+                      <span>Upgrade</span>
                     </button>
                   )}
                 </div>

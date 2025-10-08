@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Handle different subscription events
-    if (event.type === 'customer.subscription.updated') {
+    // Handle subscription updates and cancellations
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as any;
       const customerId = subscription.customer;
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       const userData = userDoc.data();
       const profileRef = userDoc.ref;
 
-      // Get price details to determine new plan name
+      // Get price details to determine plan name
       const priceId = subscription.items.data[0]?.price?.id;
       if (priceId) {
         const price = await stripe.prices.retrieve(priceId);
@@ -56,55 +56,15 @@ export async function POST(request: NextRequest) {
         
         const planName = product?.name || 'Unknown Plan';
         
-        // Update the actual plan in Firebase
-        const updateData: any = {
+        // Update Firebase with subscription details
+        await profileRef.update({
           'subscription.plan': planName,
           'subscription.status': subscription.status,
+          'subscription.cancel_at_period_end': subscription.cancel_at_period_end || false,
+          'subscription.canceled_at': subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+          'subscription.cancel_subscription_day': subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
           'subscription.updatedAt': new Date().toISOString(),
-        };
-
-        // If there was a scheduled plan change and it matches the new plan, clear it
-        if (userData.subscription?.scheduled_plan_change) {
-          const scheduledPlan = userData.subscription.scheduled_plan_change.new_plan;
-          if (scheduledPlan === planName) {
-            updateData['subscription.scheduled_plan_change'] = null;
-          }
-        }
-
-        await profileRef.update(updateData);
-      }
-    }
-
-
-
-    // Handle subscription schedule events - Stripe automatically changing plans
-    else if (event.type === 'subscription_schedule.updated' || event.type === 'subscription_schedule.completed') {
-      const schedule = event.data.object as any;
-      const subscriptionId = schedule.subscription;
-      
-      if (subscriptionId) {
-        // Find user by subscription ID
-        const profilesRef = db.collection('profiles');
-        const querySnapshot = await profilesRef
-          .where('subscription.subscriptionId', '==', subscriptionId)
-          .limit(1)
-          .get();
-
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0];
-          const userData = userDoc.data();
-          
-          // Check if this matches a scheduled change we have stored
-          const scheduledChange = userData.subscription?.scheduled_plan_change;
-          if (scheduledChange && scheduledChange.stripe_schedule_id === schedule.id) {
-            // Update Firebase to reflect the new plan
-            await userDoc.ref.update({
-              'subscription.plan': scheduledChange.new_plan,
-              'subscription.scheduled_plan_change': null, // Clear the scheduled change
-              'subscription.updatedAt': new Date().toISOString(),
-            });
-          }
-        }
+        });
       }
     }
 
