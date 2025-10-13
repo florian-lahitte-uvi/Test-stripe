@@ -336,8 +336,8 @@ export default function SubscriptionManager() {
           </h2>
           <p className="text-gray-600 mb-6">
             {isExpired 
-              ? 'Your subscription has ended. Choose a plan to continue enjoying My Umbrella Care services.' 
-              : 'You don\'t have an active subscription yet. Choose a plan to get started with My Umbrella Care.'}
+              ? 'Your subscription has ended. Choose a plan to continue enjoying Doctor Journal services.' 
+              : 'You don\'t have an active subscription yet. Choose a plan to get started with Doctor Journal.'}
           </p>
           
           <a
@@ -573,8 +573,8 @@ export default function SubscriptionManager() {
       <div className="mt-6 pt-4 border-t border-gray-200">
         <p className="text-sm text-gray-600">
           Need to change your plan or billing information? Contact our support team at{' '}
-          <a href="mailto:support@myumbrellacare.com" className="text-teal-600 hover:text-teal-700">
-            support@myumbrellacare.com
+          <a href="mailto:support@doctorjournal.com" className="text-teal-600 hover:text-teal-700">
+            support@doctorjournal.com
           </a>
         </p>
       </div>

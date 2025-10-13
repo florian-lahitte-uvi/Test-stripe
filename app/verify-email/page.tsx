@@ -118,7 +118,7 @@ export default function VerifyEmailPage() {
             <div className="flex justify-center">
               <Image
                 src="/logo_family.svg"
-                alt="My Umbrella Care"
+                alt="Doctor Journal"
                 width={80}
                 height={80}
                 className="w-20 h-20"

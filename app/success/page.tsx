@@ -147,7 +147,7 @@ export default function SuccessPage() {
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center space-x-2">
               <Sparkles className="w-8 h-8 text-yellow-500" />
-              <span>Welcome to My Umbrella Care!</span>
+              <span>Welcome to Doctor Journal!</span>
             </h1>
             <p className="text-xl text-gray-600 mb-2">
               🎉 Your subscription is now active
@@ -205,8 +205,8 @@ export default function SuccessPage() {
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600">
               Need help? Contact our support team at{' '}
-              <a href="mailto:support@myumbrellacare.com" className="text-teal-600 hover:text-teal-700">
-                support@myumbrellacare.com
+              <a href="mailto:support@doctorjournal.com" className="text-teal-600 hover:text-teal-700">
+                support@doctorjournal.com
               </a>
             </p>
           </div>
